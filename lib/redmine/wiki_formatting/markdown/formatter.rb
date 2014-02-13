@@ -16,6 +16,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 require 'cgi'
+require 'set'
 require 'loofah'
 
 module Redmine
@@ -59,7 +60,7 @@ module Redmine
             "#{$1}:\"#{$2}\""
           end
           # return scrubbed HTML
-          Loofah.fragment(html).scrub!(:strip).to_s
+          Loofah.fragment(html).scrub!(:strip).scrub!(@@class_scrubber).to_s
         end
 
         def get_section(index)
@@ -117,6 +118,16 @@ module Redmine
         end
 
         private
+
+        @@allowed_classes = Set['external', 'syntaxhl', 'ruby', 'keyword']
+
+        @@class_scrubber = Loofah::Scrubber.new do |node|
+          class_ = node['class']
+
+          if class_
+            node['class'] = (Set.new(class_.split(/[ \t\n\f\r]/)) & @@allowed_classes).to_a.join ' '
+          end
+        end
 
         def formatter
           @@formatter ||= Redcarpet::Markdown.new(
